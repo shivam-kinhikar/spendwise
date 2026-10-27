@@ -29,3 +29,11 @@ Thumbs.db
 *.swo
 .vscode/
 .idea/
+
+# Assessment prompts and internal docs
+*.pdf
+*Prompt*
+*prompt*
+AGENTS.md
+qa_report.md
+README*.md
