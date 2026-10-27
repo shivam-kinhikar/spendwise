@@ -103,8 +103,8 @@ export async function apiRequest<T>(
 // OFFLINE / LOCAL MOCK STORAGE FALLBACK
 // =================================================================
 
-const STORAGE_KEY_TX = 'spendwise_mock_transactions_v1';
-const STORAGE_KEY_BUDGETS = 'spendwise_mock_budgets_v1';
+const STORAGE_KEY_TX = 'spendwise_transactions_clean_v2';
+const STORAGE_KEY_BUDGETS = 'spendwise_budgets_clean_v2';
 
 let memoryTransactions: Transaction[] = [...INITIAL_MOCK_TRANSACTIONS];
 let memoryBudgets: Budget[] = [...INITIAL_MOCK_BUDGETS];
@@ -112,10 +112,12 @@ let memoryBudgets: Budget[] = [...INITIAL_MOCK_BUDGETS];
 function getStoredTransactions(): Transaction[] {
   if (typeof window === 'undefined') return memoryTransactions;
   try {
+    // Purge legacy demo storage keys
+    window.localStorage.removeItem('spendwise_mock_transactions_v1');
     const item = window.localStorage.getItem(STORAGE_KEY_TX);
     if (!item) {
-      window.localStorage.setItem(STORAGE_KEY_TX, JSON.stringify(INITIAL_MOCK_TRANSACTIONS));
-      return INITIAL_MOCK_TRANSACTIONS;
+      window.localStorage.setItem(STORAGE_KEY_TX, JSON.stringify([]));
+      return [];
     }
     return JSON.parse(item);
   } catch {
@@ -137,10 +139,12 @@ function saveStoredTransactions(txs: Transaction[]) {
 function getStoredBudgets(): Budget[] {
   if (typeof window === 'undefined') return memoryBudgets;
   try {
+    // Purge legacy demo storage keys
+    window.localStorage.removeItem('spendwise_mock_budgets_v1');
     const item = window.localStorage.getItem(STORAGE_KEY_BUDGETS);
     if (!item) {
-      window.localStorage.setItem(STORAGE_KEY_BUDGETS, JSON.stringify(INITIAL_MOCK_BUDGETS));
-      return INITIAL_MOCK_BUDGETS;
+      window.localStorage.setItem(STORAGE_KEY_BUDGETS, JSON.stringify([]));
+      return [];
     }
     return JSON.parse(item);
   } catch {
@@ -160,11 +164,13 @@ function saveStoredBudgets(budgets: Budget[]) {
 }
 
 export function resetMockStore(): void {
-  memoryTransactions = [...INITIAL_MOCK_TRANSACTIONS];
-  memoryBudgets = [...INITIAL_MOCK_BUDGETS];
+  memoryTransactions = [];
+  memoryBudgets = [];
   if (typeof window !== 'undefined') {
     window.localStorage.removeItem(STORAGE_KEY_TX);
     window.localStorage.removeItem(STORAGE_KEY_BUDGETS);
+    window.localStorage.removeItem('spendwise_mock_transactions_v1');
+    window.localStorage.removeItem('spendwise_mock_budgets_v1');
   }
 }
 

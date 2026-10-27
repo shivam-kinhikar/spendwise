@@ -11,8 +11,8 @@ import { GraduationCap, ArrowRight, Info, AlertCircle } from 'lucide-react';
 export default function LoginPage() {
   const router = useRouter();
   const { signIn, isRealAuth } = useAuth();
-  const [email, setEmail] = useState('student@university.edu.in');
-  const [password, setPassword] = useState('SpendWise#2026');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,7 +63,7 @@ export default function LoginPage() {
                 </span>
               ) : (
                 <span>
-                  <strong>Local Mock Mode:</strong> Cognito public environment variables can be provided in <code>.env.local</code>. Click below to explore with demo credentials.
+                  <strong>Local Session Mode:</strong> Sign in with your student email, or configure Cognito environment variables in <code>.env.local</code> for cloud authentication.
                 </span>
               )}
             </p>

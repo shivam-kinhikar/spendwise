@@ -7,19 +7,22 @@ import { Button } from '../../components/ui/Button';
 import { FormField, TextInput, SelectInput } from '../../components/ui/FormField';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { resetMockStore } from '../../lib/api';
+import { useAuth } from '../../lib/auth';
 import {
   IndianRupee,
   RotateCcw,
   GraduationCap,
   Cloud,
   Check,
+  Trash2,
 } from 'lucide-react';
 
 export default function SettingsPage() {
+  const { user, isRealAuth } = useAuth();
   const [currency] = useState('INR');
-  const [studentName, setStudentName] = useState('Aarav Sharma');
-  const [collegeName, setCollegeName] = useState('National Institute of Technology');
-  const [email] = useState('student@university.edu.in');
+  const [studentName, setStudentName] = useState(user?.name || 'Student User');
+  const [collegeName, setCollegeName] = useState(user?.college || 'Campus University');
+  const [email] = useState(user?.email || 'student@spendwise.app');
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [showSavedFeedback, setShowSavedFeedback] = useState(false);
 
@@ -122,7 +125,7 @@ export default function SettingsPage() {
           </form>
         </Card>
 
-        {/* Architecture & Authentication Roadmap */}
+        {/* Architecture & Authentication Pipeline */}
         <Card className="p-6 bg-slate-50 border-slate-200">
           <div className="flex items-start gap-3">
             <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0">
@@ -130,30 +133,36 @@ export default function SettingsPage() {
             </div>
             <div className="space-y-1">
               <h3 className="font-bold text-slate-900 text-sm">
-                AWS Architecture Pipeline
+                SpendWise Cloud & Serverless Infrastructure
               </h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Currently running in <strong className="text-slate-800">Stage 1 (Frontend UI & Isolated Mock Store)</strong>.
-                Stage 2 introduces the AWS SAM template with Lambda, DynamoDB, and Cognito User Pool.
-                Stage 3 integrates live authentication with Amazon Cognito JWT claim verification.
+                {isRealAuth ? (
+                  <>
+                    Operating in <strong className="text-slate-800">AWS Cloud Connected Mode</strong>. Transactions and budgets are stored in DynamoDB under your authenticated Cognito identity.
+                  </>
+                ) : (
+                  <>
+                    Operating in <strong className="text-slate-800">Clean Local Mode</strong> with zero demo data. All transactions and limits you create persist privately in your browser.
+                  </>
+                )}
               </p>
             </div>
           </div>
         </Card>
 
-        {/* Reset Mock Data for Testing */}
+        {/* Clear Local Data */}
         <Card className="p-6 border-red-200/80 bg-red-50/10">
           <CardHeader
-            title="Reset Local Mock Data"
-            subtitle="Restore transactions and monthly budgets back to the initial sample records"
+            title="Clear Local Records"
+            subtitle="Erase all stored transactions and monthly budgets to start fresh"
             action={
               <div className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center">
-                <RotateCcw className="w-4 h-4" />
+                <Trash2 className="w-4 h-4" />
               </div>
             }
           />
           <p className="text-xs text-slate-600 mb-4 max-w-lg leading-relaxed">
-            If you added, edited, or deleted transactions during testing and want to reset back to the pristine assessment seed data, click below.
+            Wipes all transactions and budget limits recorded in this local session. Useful if you want to start over with a completely empty ledger.
           </p>
           <Button
             variant="danger"
@@ -161,7 +170,7 @@ export default function SettingsPage() {
             onClick={() => setIsResetConfirmOpen(true)}
             leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
           >
-            Reset to Initial Mock Records
+            Clear All Local Data
           </Button>
         </Card>
       </div>
@@ -171,9 +180,9 @@ export default function SettingsPage() {
         isOpen={isResetConfirmOpen}
         onClose={() => setIsResetConfirmOpen(false)}
         onConfirm={handleConfirmReset}
-        title="Reset All Mock Data?"
-        message="This will reset all modified transactions and budgets back to the default seed dataset. Any custom entries created during this session will be replaced."
-        confirmText="Confirm Reset"
+        title="Clear All Local Data?"
+        message="This will permanently remove all transactions and monthly budgets stored in this browser session, resetting your dashboard to a clean slate. This action cannot be undone."
+        confirmText="Yes, Clear All Data"
         isDestructive={true}
       />
     </AppShell>

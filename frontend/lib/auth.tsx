@@ -31,10 +31,10 @@ interface AuthContextType {
 }
 
 const DEFAULT_MOCK_USER: User = {
-  id: 'usr_student_demo_01',
-  email: 'student@university.edu.in',
-  name: 'Aarav Sharma',
-  college: 'National Institute of Technology',
+  id: 'usr_student',
+  email: 'student@spendwise.app',
+  name: 'Student User',
+  college: 'Campus University',
   currency: 'INR',
 };
 

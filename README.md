@@ -124,7 +124,7 @@ spendwise/
 │   │   ├── auth.tsx                # AuthProvider with Cognito session hooks
 │   │   ├── cognito.ts              # AWS Cognito User Pools integration
 │   │   ├── currency.ts             # INR formatting & calculation helpers
-│   │   └── mockData.ts             # Centralized student seed dataset
+│   │   └── mockData.ts             # Clean client dataset initialization (zero demo records)
 │   └── types/index.ts              # TypeScript domain models
 │
 ├── backend/                        # AWS Serverless Backend

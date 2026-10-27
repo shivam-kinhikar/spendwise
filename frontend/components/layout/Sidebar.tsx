@@ -11,8 +11,10 @@ import {
   Settings,
   PlusCircle,
   GraduationCap,
-  Sparkles,
+  Cloud,
+  ShieldCheck,
 } from 'lucide-react';
+import { useAuth } from '../../lib/auth';
 
 const NAV_ITEMS = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -25,6 +27,17 @@ const NAV_ITEMS = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { user, isRealAuth } = useAuth();
+
+  const displayName = user?.name || 'Student User';
+  const displayEmail = user?.email || 'student@spendwise.app';
+  const initials = displayName
+    .split(' ')
+    .filter(Boolean)
+    .map((w) => w[0])
+    .join('')
+    .substring(0, 2)
+    .toUpperCase() || 'ST';
 
   return (
     <aside className="hidden lg:flex flex-col w-64 border-r border-slate-200 bg-white min-h-screen shrink-0">
@@ -73,25 +86,36 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Phase 1 Mock Badge / Student Note */}
-      <div className="p-4 m-3 rounded-xl bg-slate-50 border border-slate-200/80">
-        <div className="flex items-center gap-2 text-xs font-semibold text-indigo-900 mb-1">
-          <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-          <span>Stage 1: Mock Mode</span>
+      {/* Connection Mode Indicator */}
+      <div className="p-3.5 m-3 rounded-xl bg-slate-50 border border-slate-200/80">
+        <div className="flex items-center gap-2 text-xs font-semibold text-slate-800 mb-1">
+          {isRealAuth ? (
+            <>
+              <Cloud className="w-3.5 h-3.5 text-emerald-600" />
+              <span className="text-emerald-800">AWS Cloud Connected</span>
+            </>
+          ) : (
+            <>
+              <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
+              <span className="text-indigo-900">Private Student Session</span>
+            </>
+          )}
         </div>
         <p className="text-[11px] text-slate-500 leading-relaxed">
-          Running with client-isolated mock data. AWS API Gateway & Cognito attach in Stage 3.
+          {isRealAuth
+            ? 'Authenticated with Amazon Cognito. Data persisted in DynamoDB.'
+            : 'Running in zero-demo mode. Create your first record anytime.'}
         </p>
       </div>
 
       {/* User profile preview footer */}
       <div className="p-4 border-t border-slate-100 flex items-center gap-3">
         <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center border border-indigo-200">
-          AS
+          {initials}
         </div>
         <div className="overflow-hidden">
-          <p className="text-xs font-semibold text-slate-800 truncate">Aarav Sharma</p>
-          <p className="text-[11px] text-slate-400 truncate">student@university.edu</p>
+          <p className="text-xs font-semibold text-slate-800 truncate">{displayName}</p>
+          <p className="text-[11px] text-slate-400 truncate">{displayEmail}</p>
         </div>
       </div>
     </aside>

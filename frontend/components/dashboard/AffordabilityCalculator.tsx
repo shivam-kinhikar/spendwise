@@ -69,7 +69,15 @@ export function AffordabilityCalculator({
       icon: <AlertTriangle className="w-5 h-5 text-amber-500" />,
     };
   } else if (isValidNumber) {
-    if (projectedRemaining < 0) {
+    if (overallBudgetLimit <= 0) {
+      verdict = {
+        status: 'caution',
+        title: 'No Monthly Budget Configured',
+        description: 'Set an overall monthly budget limit in the Budgets tab to evaluate affordability against your spending limit.',
+        color: 'bg-amber-50 text-amber-800 border-amber-200',
+        icon: <AlertTriangle className="w-5 h-5 text-amber-600" />,
+      };
+    } else if (projectedRemaining < 0) {
       verdict = {
         status: 'exceeded',
         title: 'Exceeds Monthly Budget',
