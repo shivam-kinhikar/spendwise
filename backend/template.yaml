@@ -1,0 +1,257 @@
+AWSTemplateFormatVersion: '2016-10-31'
+Transform: AWS::Serverless-2016-10-31
+Description: SpendWise - Student Expense Tracker Serverless API (Node.js 22, DynamoDB, Cognito, S3, HTTP API)
+
+Parameters:
+  Stage:
+    Type: String
+    Default: dev
+    Description: Deployment stage environment (dev, staging, prod)
+  AllowedOrigin:
+    Type: String
+    Default: '*'
+    Description: CORS Allowed Origin for Next.js frontend (e.g. http://localhost:3000 or Amplify domain)
+
+Globals:
+  Function:
+    Timeout: 15
+    MemorySize: 256
+    Runtime: nodejs22.x
+    Architectures:
+      - arm64
+
+Resources:
+  # =================================================================
+  # 1. AMAZON COGNITO USER POOL & APP CLIENT (Browser Auth)
+  # =================================================================
+  SpendWiseCognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub "${AWS::StackName}-user-pool"
+      AutoVerifiedAttributes:
+        - email
+      UsernameAttributes:
+        - email
+      PasswordPolicy:
+        MinimumLength: 8
+        RequireLowercase: true
+        RequireNumbers: true
+        RequireUppercase: true
+        RequireSymbols: false
+      Schema:
+        - Name: email
+          AttributeDataType: String
+          Required: true
+          Mutable: true
+        - Name: name
+          AttributeDataType: String
+          Required: false
+          Mutable: true
+
+  SpendWiseCognitoUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub "${AWS::StackName}-web-client"
+      UserPoolId: !Ref SpendWiseCognitoUserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_PASSWORD_AUTH
+
+  # =================================================================
+  # 2. AMAZON API GATEWAY HTTP API (v2)
+  # =================================================================
+  SpendWiseHttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: !Ref Stage
+      CorsConfiguration:
+        AllowOrigins:
+          - !Ref AllowedOrigin
+        AllowHeaders:
+          - Content-Type
+          - Authorization
+          - X-Amz-Date
+          - X-Api-Key
+          - X-Amz-Security-Token
+        AllowMethods:
+          - GET
+          - POST
+          - PATCH
+          - DELETE
+          - OPTIONS
+        MaxAge: 3600
+      Auth:
+        DefaultAuthorizer: CognitoJwtAuthorizer
+        Authorizers:
+          CognitoJwtAuthorizer:
+            IdentitySource: "$request.header.Authorization"
+            JwtConfiguration:
+              Audience:
+                - !Ref SpendWiseCognitoUserPoolClient
+              Issuer: !Sub "https://cognito-idp.${AWS::Region}.amazonaws.com/${SpendWiseCognitoUserPool}"
+
+  # =================================================================
+  # 3. AMAZON DYNAMODB (Single-Table Design, On-Demand Billing)
+  # =================================================================
+  SpendWiseTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${AWS::StackName}-table"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+        - AttributeName: GSI1PK
+          AttributeType: S
+        - AttributeName: GSI1SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: GSI1
+          KeySchema:
+            - AttributeName: GSI1PK
+              KeyType: HASH
+            - AttributeName: GSI1SK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+
+  # =================================================================
+  # 4. AMAZON S3 RECEIPT BUCKET (Private, Public Access Blocked)
+  # =================================================================
+  SpendWiseReceiptsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${AWS::StackName}-receipts-${AWS::AccountId}"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - '*'
+            AllowedMethods:
+              - PUT
+              - GET
+            AllowedOrigins:
+              - !Ref AllowedOrigin
+            MaxAge: 3600
+
+  # =================================================================
+  # 5. AWS LAMBDA FUNCTION (Node.js 22 ES Modules)
+  # =================================================================
+  SpendWiseFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: src/index.handler
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref SpendWiseTable
+          RECEIPTS_BUCKET: !Ref SpendWiseReceiptsBucket
+          ALLOWED_ORIGIN: !Ref AllowedOrigin
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SpendWiseTable
+        - S3CrudPolicy:
+            BucketName: !Ref SpendWiseReceiptsBucket
+      Events:
+        # Public Health Endpoint
+        HealthApi:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref SpendWiseHttpApi
+            Path: /health
+            Method: GET
+            Auth:
+              Authorizer: NONE
+
+        # Authenticated Transactions Endpoints
+        TransactionsRoot:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref SpendWiseHttpApi
+            Path: /transactions
+            Method: ANY
+        TransactionsProxy:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref SpendWiseHttpApi
+            Path: /transactions/{proxy+}
+            Method: ANY
+
+        # Authenticated Budgets Endpoints
+        BudgetsRoot:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref SpendWiseHttpApi
+            Path: /budgets
+            Method: ANY
+        BudgetsProxy:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref SpendWiseHttpApi
+            Path: /budgets/{proxy+}
+            Method: ANY
+
+        # Authenticated Analytics Endpoint
+        AnalyticsSummary:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref SpendWiseHttpApi
+            Path: /analytics/summary
+            Method: GET
+
+        # Authenticated S3 Presigned Uploads Endpoint
+        UploadsPresign:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref SpendWiseHttpApi
+            Path: /uploads/presign
+            Method: POST
+
+# =================================================================
+# OUTPUTS
+# =================================================================
+Outputs:
+  ApiEndpoint:
+    Description: HTTP API Gateway Base URL for frontend integration
+    Value: !Sub "https://${SpendWiseHttpApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}"
+
+  HttpApiId:
+    Description: API Gateway HTTP API ID
+    Value: !Ref SpendWiseHttpApi
+
+  CognitoUserPoolId:
+    Description: Cognito User Pool ID
+    Value: !Ref SpendWiseCognitoUserPool
+
+  CognitoUserPoolClientId:
+    Description: Cognito App Client ID (Public web client)
+    Value: !Ref SpendWiseCognitoUserPoolClient
+
+  DynamoDBTableName:
+    Description: Single-Table DynamoDB name
+    Value: !Ref SpendWiseTable
+
+  ReceiptsBucketName:
+    Description: Private S3 receipts bucket name
+    Value: !Ref SpendWiseReceiptsBucket

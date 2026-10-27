@@ -1,0 +1,13 @@
+{
+  "name": "spendwise-workspace",
+  "version": "1.0.0",
+  "description": "SpendWise - Student Expense Tracker (Full Stack Monorepo)",
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs backend/tests/*.test.mjs",
+    "test:qa": "node --test tests/*.test.mjs",
+    "test:backend": "cd backend && npm test",
+    "lint:frontend": "cd frontend && npm run lint",
+    "build:frontend": "cd frontend && npm run build"
+  }
+}
